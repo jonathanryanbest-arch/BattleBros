@@ -60,7 +60,7 @@ export default async function RosterPage() {
         </header>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {cards.map((f) => {
+          {cards.map((f: (typeof cards)[number]) => {
             const locked = f.status === "locked";
             const fillRatio = Math.min(f.counts.uniqueTagsInSnapshot / UNLOCK_THRESHOLD, 1);
             return (

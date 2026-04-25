@@ -26,7 +26,7 @@ export default async function RosterPage() {
   });
 
   const cards = await Promise.all(
-    friends.map(async (f) => ({
+    friends.map(async (f: (typeof friends)[number]) => ({
       ...f,
       counts: await getTraitCountsForFriend(f.id),
     })),

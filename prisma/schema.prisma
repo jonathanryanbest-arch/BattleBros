@@ -1,0 +1,153 @@
+// BattleBros — Prisma schema.
+// Trait-cloud is the entire fighter profile; submissions are append-only and
+// propagate to Friend.cachedTraits only on the nightly refresh job.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum FriendStatus {
+  locked
+  unlocked
+}
+
+enum TraitContributionKind {
+  submit
+  upvote
+}
+
+enum FightStatus {
+  spinning
+  locked
+  streaming
+  done
+}
+
+enum Drunkenness {
+  sober
+  buzzed
+  drunk
+  hammered
+}
+
+enum LibrarySource {
+  day1
+  emergent
+}
+
+enum FightTurnKind {
+  spin
+  narration
+  verdict
+}
+
+model Friend {
+  id             String       @id @default(cuid())
+  name           String       @unique
+  hashedPassword String
+  avatarUrl      String?
+  status         FriendStatus @default(locked)
+  unlockedAt     DateTime?
+  cachedTraits   Json         @default("[]")
+  cachedTraitsAt DateTime?
+  createdAt      DateTime     @default(now())
+
+  traitContributionsAbout FriendTraitContribution[] @relation("TraitsAbout")
+  traitContributionsBy    FriendTraitContribution[] @relation("TraitsBy")
+  fightsAsA               Fight[]                   @relation("FightFighterA")
+  fightsAsB               Fight[]                   @relation("FightFighterB")
+  cameosAt                Fight[]                   @relation("FightCameo")
+  emergentWeapons         Weapon[]                  @relation("WeaponDerivedFrom")
+  emergentLocations       Location[]                @relation("LocationDerivedFrom")
+}
+
+model FriendTraitContribution {
+  id            String                @id @default(cuid())
+  friendId      String
+  contributorId String
+  tag           String
+  displayTag    String
+  kind          TraitContributionKind
+  claudeFlagged Boolean               @default(false)
+  createdAt     DateTime              @default(now())
+
+  friend      Friend @relation("TraitsAbout", fields: [friendId], references: [id], onDelete: Cascade)
+  contributor Friend @relation("TraitsBy", fields: [contributorId], references: [id], onDelete: Cascade)
+
+  @@index([friendId, tag])
+  @@index([contributorId, friendId, kind, createdAt])
+  @@index([friendId, kind])
+}
+
+model Weapon {
+  id                  String        @id @default(cuid())
+  key                 String        @unique
+  name                String
+  blurb               String
+  modifiers           Json
+  source              LibrarySource @default(day1)
+  derivedFromFriendId String?
+  fighterSpecificId   String?
+  excludeLocations    String[]      @default([])
+  onlyLocations       String[]      @default([])
+  minDrunkenness      Drunkenness?
+  minGrit             Int?
+  createdAt           DateTime      @default(now())
+
+  derivedFromFriend Friend? @relation("WeaponDerivedFrom", fields: [derivedFromFriendId], references: [id], onDelete: SetNull)
+}
+
+model Location {
+  id                  String        @id @default(cuid())
+  key                 String        @unique
+  name                String
+  blurb               String
+  modifiers           Json
+  environmentalAmmo   String[]      @default([])
+  source              LibrarySource @default(day1)
+  derivedFromFriendId String?
+  createdAt           DateTime      @default(now())
+
+  derivedFromFriend Friend? @relation("LocationDerivedFrom", fields: [derivedFromFriendId], references: [id], onDelete: SetNull)
+}
+
+model Fight {
+  id               String      @id @default(cuid())
+  fighterAId       String
+  fighterBId       String
+  cameoFriendId    String?
+  locationKey      String
+  weaponAKey       String?
+  weaponBKey       String?
+  drunkennessA     Drunkenness @default(buzzed)
+  drunkennessB     Drunkenness @default(buzzed)
+  baseProbabilityA Int?
+  rolledWinnerId   String?
+  status           FightStatus @default(spinning)
+  finalBlow        String?
+  tagline          String?
+  createdAt        DateTime    @default(now())
+
+  fighterA    Friend      @relation("FightFighterA", fields: [fighterAId], references: [id])
+  fighterB    Friend      @relation("FightFighterB", fields: [fighterBId], references: [id])
+  cameoFriend Friend?     @relation("FightCameo", fields: [cameoFriendId], references: [id])
+  turns       FightTurn[]
+}
+
+model FightTurn {
+  id        String        @id @default(cuid())
+  fightId   String
+  ord       Int
+  kind      FightTurnKind
+  content   Json
+  createdAt DateTime      @default(now())
+
+  fight Fight @relation(fields: [fightId], references: [id], onDelete: Cascade)
+
+  @@unique([fightId, ord])
+  @@index([fightId])
+}

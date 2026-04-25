@@ -34,7 +34,7 @@ export default async function FightsHistoryPage() {
           </p>
         ) : (
           <ul className="space-y-3">
-            {fights.map((f) => {
+            {fights.map((f: (typeof fights)[number]) => {
               const winnerName =
                 f.rolledWinnerId === f.fighterAId
                   ? f.fighterA.name

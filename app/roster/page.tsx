@@ -5,6 +5,8 @@ import { getSession } from "@/lib/session";
 import { getTraitCountsForFriend } from "@/lib/trait-counts";
 import { LogoutButton } from "@/components/LogoutButton";
 
+const NEW_FIGHT_HREF = "/fight/new";
+
 export const dynamic = "force-dynamic";
 
 const UNLOCK_THRESHOLD = 5;
@@ -40,7 +42,15 @@ export default async function RosterPage() {
               {session.name} is signed in. Pick a fighter or contribute traits.
             </p>
           </div>
-          <LogoutButton />
+          <div className="flex items-center gap-3">
+            <Link
+              href={NEW_FIGHT_HREF}
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500"
+            >
+              Start a fight
+            </Link>
+            <LogoutButton />
+          </div>
         </header>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 const SESSION_COOKIE = "bb_session";
 
 const PUBLIC_PATHS = new Set(["/login"]);
-const PUBLIC_PREFIXES = ["/api/auth/login", "/_next", "/favicon"];
+const PUBLIC_PREFIXES = ["/api/auth/login", "/api/cron/", "/_next", "/favicon"];
 
 function getSecret(): Uint8Array {
   const secret = process.env.SESSION_SECRET;

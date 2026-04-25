@@ -1,17 +1,15 @@
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 
-declare global {
-  var anthropic: Anthropic | undefined;
+let _client: OpenAI | null = null;
+
+export function groq(): OpenAI {
+  if (!_client) {
+    _client = new OpenAI({
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+    });
+  }
+  return _client;
 }
 
-export const anthropic =
-  globalThis.anthropic ??
-  new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-  });
-
-if (process.env.NODE_ENV !== "production") {
-  globalThis.anthropic = anthropic;
-}
-
-export const CLAUDE_MODEL = process.env.CLAUDE_MODEL ?? "claude-sonnet-4-6";
+export const LLM_MODEL = process.env.LLM_MODEL ?? "llama-3.3-70b-versatile";

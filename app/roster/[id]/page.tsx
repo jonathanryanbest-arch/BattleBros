@@ -3,6 +3,11 @@ import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { getTraitCountsForFriend } from "@/lib/trait-counts";
+import { loadCachedTraits, loadContributionRows } from "@/lib/profile-data";
+import { pickSuggestions } from "@/lib/traits";
+import { AddTraitForm } from "@/components/AddTraitForm";
+import { TraitCloud } from "@/components/TraitCloud";
+import { TraitContributionList } from "@/components/TraitContributionList";
 
 export const dynamic = "force-dynamic";
 
@@ -17,19 +22,26 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
 
   const friend = await prisma.friend.findUnique({
     where: { id },
-    select: {
-      id: true,
-      name: true,
-      avatarUrl: true,
-      status: true,
-      cachedTraits: true,
-      cachedTraitsAt: true,
-    },
+    select: { id: true, name: true, avatarUrl: true, status: true },
   });
   if (!friend) notFound();
 
-  const counts = await getTraitCountsForFriend(friend.id);
+  const [counts, cached] = await Promise.all([
+    getTraitCountsForFriend(friend.id),
+    loadCachedTraits(friend.id),
+  ]);
+  const contributions = await loadContributionRows(
+    friend.id,
+    session.friendId,
+    cached.cachedTraitsAt,
+  );
+
   const locked = friend.status === "locked";
+  const seed = (friend.id + (session.friendId ?? "")).split("").reduce(
+    (acc, ch) => acc + ch.charCodeAt(0),
+    0,
+  );
+  const suggestions = pickSuggestions(seed, 3);
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100">
@@ -70,16 +82,33 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
           <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-400">
             Trait cloud
           </h2>
-          <p className="text-sm text-neutral-500">
-            {locked ? "No traits yet — be the first to add one." : "Trait cloud coming soon."}
-          </p>
+          <TraitCloud
+            traits={cached.traits}
+            emptyMessage={
+              locked
+                ? "No traits yet — be the first to add one."
+                : "Snapshot pending — refreshes nightly."
+            }
+          />
+          {cached.cachedTraitsAt ? (
+            <p className="text-[11px] text-neutral-500">
+              Last refreshed {new Date(cached.cachedTraitsAt).toLocaleString()}
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
           <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-400">
             Add a trait
           </h2>
-          <p className="text-sm text-neutral-500">Trait submission UI ships in M2.</p>
+          <AddTraitForm friendId={friend.id} friendName={friend.name} suggestions={suggestions} />
+        </section>
+
+        <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 space-y-4">
+          <h2 className="text-sm font-medium uppercase tracking-wide text-neutral-400">
+            Contributed traits
+          </h2>
+          <TraitContributionList friendId={friend.id} contributions={contributions} />
         </section>
       </div>
     </main>

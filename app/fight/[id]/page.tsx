@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 import { FightSlotMachine } from "@/components/FightSlotMachine";
 import { FightStream } from "@/components/FightStream";
+import { FightSetupCard } from "@/components/FightSetupCard";
+import { RematchButton } from "@/components/RematchButton";
 
 export const dynamic = "force-dynamic";
 
@@ -62,7 +64,17 @@ export default async function FightPage({ params }: { params: Params }) {
             weaponB={weaponB ? { name: weaponB.name, blurb: weaponB.blurb } : null}
           />
         ) : (
-          <FightStream
+          <>
+            <FightSetupCard
+              location={location ? { name: location.name, blurb: location.blurb } : null}
+              weaponA={weaponA ? { name: weaponA.name } : null}
+              weaponB={weaponB ? { name: weaponB.name } : null}
+              fighterAName={fight.fighterA.name}
+              fighterBName={fight.fighterB.name}
+              drunkennessA={fight.drunkennessA}
+              drunkennessB={fight.drunkennessB}
+            />
+            <FightStream
             fightId={fight.id}
             fighterAId={fight.fighterAId}
             fighterAName={fight.fighterA.name}
@@ -84,6 +96,13 @@ export default async function FightPage({ params }: { params: Params }) {
             }
             isDone={fight.status === "done"}
           />
+            {fight.status === "done" ? (
+              <RematchButton
+                fighterAId={fight.fighterAId}
+                fighterBId={fight.fighterBId}
+              />
+            ) : null}
+          </>
         )}
       </div>
     </main>

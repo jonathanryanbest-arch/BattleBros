@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BattleBros</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="avatar.jsx"></script>
+  <script type="text/babel" src="card-art.jsx"></script>
+  <script type="text/babel" src="roster.jsx"></script>
+  <script type="text/babel" src="profile.jsx"></script>
+  <script type="text/babel" src="slot-machine.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+
+  <script type="text/babel">
+    const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+      "animLevel": 0.7,
+      "scanlines": false,
+      "accent": "pink"
+    }/*EDITMODE-END*/;
+
+    function App() {
+      const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+      const [page, setPage] = React.useState("roster"); // roster | profile | slot
+      const [activeFighterId, setActiveFighterId] = React.useState(null);
+      const [fighters, setFighters] = React.useState(() => window.BB_DATA.FIGHTERS);
+      const [splash, setSplash] = React.useState(null);
+
+      const activeFighter = fighters.find(f => f.id === activeFighterId);
+
+      const onAddTrait = (id, text) => {
+        setFighters(prev => prev.map(f => f.id === id
+          ? { ...f, traits: [{ text, weight: 5, by: "you", up: 1 }, ...f.traits] }
+          : f));
+      };
+
+      const onSelectFighter = (id) => {
+        setActiveFighterId(id);
+        setPage("profile");
+      };
+
+      const onLockIn = ({ fighterA, fighterB, venue, weaponA, weaponB }) => {
+        setSplash(`${fighterA.name} VS ${fighterB.name}`);
+        setTimeout(() => setSplash(null), 2400);
+      };
+
+      return (
+        <div className={`bb-app ${t.scanlines ? 'bb-scanlines' : ''}`}>
+          <header className="bb-topbar">
+            <div className="bb-logo">
+              <span className="bb-logo-mark"></span>
+              BATTLE<span className="accent">BROS</span>
+            </div>
+            <nav className="bb-nav">
+              <button className={page === "roster" ? "is-active" : ""} onClick={() => setPage("roster")}>Roster</button>
+              <button className={page === "profile" ? "is-active" : ""}
+                      onClick={() => { if (!activeFighterId) setActiveFighterId(fighters[0].id); setPage("profile"); }}>
+                Profile
+              </button>
+              <button className={page === "slot" ? "is-active" : ""} onClick={() => setPage("slot")}>Fight Setup</button>
+            </nav>
+            <div className="bb-topbar-right">
+              <span className="bb-coin">◎ 1,420 COINS</span>
+            </div>
+          </header>
+
+          <main>
+            {page === "roster" && (
+              <RosterPage fighters={fighters} onSelect={onSelectFighter} animLevel={t.animLevel} />
+            )}
+            {page === "profile" && activeFighter && (
+              <ProfilePage fighter={activeFighter} onBack={() => setPage("roster")}
+                           onAddTrait={onAddTrait} animLevel={t.animLevel} />
+            )}
+            {page === "slot" && (
+              <SlotMachine fighters={fighters} onLockIn={onLockIn} animLevel={t.animLevel} />
+            )}
+          </main>
+
+          {splash && (
+            <div className="bb-fight-splash">
+              <h2>{splash}</h2>
+              <div style={{
+                fontFamily: "var(--mono)",
+                color: "var(--ink-2)",
+                letterSpacing: "3px",
+                fontSize: "13px",
+              }}>
+                ▸ FIGHT NARRATION COMING IN A LATER PASS
+              </div>
+            </div>
+          )}
+
+          <TweaksPanel>
+            <TweakSection label="Energy" />
+            <TweakSlider label="Animation intensity" value={t.animLevel}
+                         min={0} max={1} step={0.1}
+                         onChange={(v) => setTweak('animLevel', v)} />
+            <TweakToggle label="CRT scanlines" value={t.scanlines}
+                         onChange={(v) => setTweak('scanlines', v)} />
+          </TweaksPanel>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+  </script>
+</body>
+</html>

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "prisma migrate deploy && next start",
     "lint": "eslint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
@@ -21,6 +21,7 @@
     "jose": "^6.2.2",
     "next": "15.5.15",
     "pg": "^8.20.0",
+    "prisma": "^7.8.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "^4.3.6"
@@ -36,7 +37,6 @@
     "dotenv": "^17.4.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.15",
-    "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"

@@ -27,4 +27,4 @@ COPY --from=builder /app/node_modules ./node_modules
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["sh", "-c", "pnpm exec prisma db push && pnpm exec next start"]
+CMD ["sh", "-c", "pnpm exec prisma db push --accept-data-loss && pnpm exec next start"]

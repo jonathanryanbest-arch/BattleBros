@@ -1,5 +1,6 @@
 import { runFightStream } from "@/lib/fight/narrate";
 import { requireSession } from "@/lib/session";
+import { prisma } from "@/lib/prisma";
 
 export const maxDuration = 300;
 export const dynamic = "force-dynamic";
@@ -11,12 +12,24 @@ function sse(data: unknown): Uint8Array {
 }
 
 export async function GET(_request: Request, { params }: { params: Params }) {
+  let session;
   try {
-    await requireSession();
+    session = await requireSession();
   } catch {
     return new Response("Unauthorized", { status: 401 });
   }
   const { id } = await params;
+
+  const fight = await prisma.fight.findUnique({
+    where: { id },
+    select: { fighterAId: true, fighterBId: true },
+  });
+  if (!fight) {
+    return new Response("Fight not found", { status: 404 });
+  }
+  if (session.friendId !== fight.fighterAId && session.friendId !== fight.fighterBId) {
+    return new Response("Forbidden", { status: 403 });
+  }
 
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {

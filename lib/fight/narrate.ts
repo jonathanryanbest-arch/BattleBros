@@ -1,12 +1,8 @@
-// Streaming narration: read setup + resolved winner, stream tokens to the
-// client, capture finalize_fight at the end, mark the fight as done.
-
-import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
+import { groq, LLM_MODEL } from "@/lib/anthropic";
 import { prisma } from "@/lib/prisma";
 import {
   buildNarrationUserPrompt,
   FIGHT_SYSTEM_PROMPT,
-  FINALIZE_FIGHT_TOOL,
   type NarrationInput,
 } from "@/lib/prompts/fight-system";
 import type { CloudTag } from "@/lib/profile-data";
@@ -27,7 +23,6 @@ export async function* runFightStream(fightId: string): AsyncGenerator<StreamEve
     return;
   }
   if (fight.status === "done") {
-    // Replay from persisted turns instead of re-streaming.
     const turns = await prisma.fightTurn.findMany({
       where: { fightId },
       orderBy: { ord: "asc" },
@@ -112,30 +107,67 @@ export async function* runFightStream(fightId: string): AsyncGenerator<StreamEve
   let finalBlow: string | null = null;
   let tagline: string | null = null;
 
-  const stream = anthropic.messages.stream({
-    model: CLAUDE_MODEL,
+  const stream = await groq().chat.completions.create({
+    model: LLM_MODEL,
     max_tokens: 1500,
-    system: FIGHT_SYSTEM_PROMPT,
-    tools: [FINALIZE_FIGHT_TOOL],
-    messages: [{ role: "user", content: buildNarrationUserPrompt(input) }],
+    stream: true,
+    messages: [
+      { role: "system", content: FIGHT_SYSTEM_PROMPT },
+      { role: "user", content: buildNarrationUserPrompt(input) },
+    ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "finalize_fight",
+          description:
+            "End the fight. Emit the final blow and a one-line tagline consistent with the resolved winner.",
+          parameters: {
+            type: "object",
+            properties: {
+              finalBlow: {
+                type: "string",
+                description: "One sentence describing the decisive moment that ends the fight.",
+              },
+              tagline: {
+                type: "string",
+                description: "One short, quotable line capturing the vibe of the win (≤ 80 chars).",
+              },
+            },
+            required: ["finalBlow", "tagline"],
+          },
+        },
+      },
+    ],
   });
 
-  for await (const event of stream) {
-    if (event.type === "content_block_delta") {
-      const delta = event.delta;
-      if (delta.type === "text_delta") {
-        accumulatedText += delta.text;
-        yield { type: "delta", text: delta.text };
+  let toolCallArgs = "";
+
+  for await (const chunk of stream) {
+    const delta = chunk.choices[0]?.delta;
+    if (!delta) continue;
+
+    if (delta.content) {
+      accumulatedText += delta.content;
+      yield { type: "delta", text: delta.content };
+    }
+
+    if (delta.tool_calls) {
+      for (const tc of delta.tool_calls) {
+        if (tc.function?.arguments) {
+          toolCallArgs += tc.function.arguments;
+        }
       }
     }
   }
 
-  const finalMessage = await stream.finalMessage();
-  for (const block of finalMessage.content) {
-    if (block.type === "tool_use" && block.name === "finalize_fight") {
-      const input = block.input as { finalBlow?: string; tagline?: string };
-      finalBlow = input.finalBlow ?? null;
-      tagline = input.tagline ?? null;
+  if (toolCallArgs) {
+    try {
+      const parsed = JSON.parse(toolCallArgs) as { finalBlow?: string; tagline?: string };
+      finalBlow = parsed.finalBlow ?? null;
+      tagline = parsed.tagline ?? null;
+    } catch {
+      // Tool call JSON incomplete
     }
   }
 
@@ -144,7 +176,6 @@ export async function* runFightStream(fightId: string): AsyncGenerator<StreamEve
     tagline = tagline ?? "And that was that.";
   }
 
-  // Persist transcript.
   let ord = 0;
   await prisma.fightTurn.create({
     data: {

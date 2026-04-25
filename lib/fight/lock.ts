@@ -16,7 +16,7 @@ export async function lockFight(fightId: string): Promise<{ winner: "A" | "B"; p
     },
   });
   if (fight.status !== "spinning") {
-    throw new Error("Fight is already locked");
+    throw new Error("Fight is not in spinning state");
   }
 
   const [location, weaponA, weaponB] = await Promise.all([
@@ -43,13 +43,16 @@ export async function lockFight(fightId: string): Promise<{ winner: "A" | "B"; p
   const result = resolveOutcome(probabilityA);
   const rolledWinnerId = result.winner === "A" ? fight.fighterAId : fight.fighterBId;
 
-  await prisma.fight.update({
-    where: { id: fightId },
+  const updated = await prisma.fight.updateMany({
+    where: { id: fightId, status: "spinning" },
     data: {
       baseProbabilityA: probabilityA,
       rolledWinnerId,
       status: "locked",
     },
   });
+  if (updated.count === 0) {
+    throw new Error("Fight was locked by another request");
+  }
   return { winner: result.winner, probabilityA };
 }

@@ -3,7 +3,6 @@
 // toward that verdict with full detail. The trait cloud shapes how the win
 // reads; the venue and weapons drive the beats.
 
-import type { Tool } from "@anthropic-ai/sdk/resources";
 import type { CloudTag } from "@/lib/profile-data";
 import type { Location, Weapon, Drunkenness } from "@prisma/client";
 
@@ -51,31 +50,14 @@ Tool:
 Never say "you" or "your" — third-person framing throughout.
 Never reveal the resolved winner's name in the narration before the tool call.`;
 
-export const FINALIZE_FIGHT_TOOL: Tool = {
-  name: "finalize_fight",
-  description:
-    "End the fight. Emit the final blow and a one-line tagline consistent with the resolved winner.",
-  input_schema: {
-    type: "object",
-    properties: {
-      finalBlow: {
-        type: "string",
-        description: "One sentence describing the decisive moment that ends the fight.",
-      },
-      tagline: {
-        type: "string",
-        description: "One short, quotable line capturing the vibe of the win (≤ 80 chars).",
-      },
-    },
-    required: ["finalBlow", "tagline"],
-  },
-};
+// Tool definition moved inline to narrate.ts (OpenAI format)
 
 export function buildNarrationUserPrompt(input: NarrationInput): string {
   const winnerLabel = input.resolvedWinner === "A" ? input.fighterA.name : input.fighterB.name;
+  const sanitize = (s: string) => s.replace(/[\n\r\[\]`]/g, "").slice(0, 60);
   const cloud = (f: NarrationInput["fighterA"]) =>
     f.traits.length
-      ? f.traits.slice(0, 25).map((t) => `${t.displayTag} [${t.weight}]`).join(", ")
+      ? f.traits.slice(0, 25).map((t) => `"${sanitize(t.displayTag)}" [${t.weight}]`).join(", ")
       : "(no traits yet)";
   const wpn = (w: Weapon | null, side: string) =>
     w

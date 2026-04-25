@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
-import { normalizeTraitTag, tidyDisplayTag } from "@/lib/traits";
+import { normalizeTraitTag } from "@/lib/traits";
 
 type Params = Promise<{ id: string; traitTag: string }>;
 
@@ -28,29 +28,22 @@ export async function POST(_request: Request, { params }: { params: Params }) {
     return NextResponse.json({ error: "No such trait for this friend" }, { status: 404 });
   }
 
-  // Idempotent: already upvoted?
-  const already = await prisma.friendTraitContribution.findFirst({
-    where: {
-      friendId,
-      tag,
-      kind: "upvote",
-      contributorId: session.friendId,
-    },
-    select: { id: true },
-  });
-  if (already) {
-    return NextResponse.json({ ok: true, alreadyUpvoted: true });
+  try {
+    await prisma.friendTraitContribution.create({
+      data: {
+        friendId,
+        contributorId: session.friendId,
+        tag,
+        displayTag: existing.displayTag,
+        kind: "upvote",
+      },
+    });
+  } catch (e: unknown) {
+    if (typeof e === "object" && e !== null && "code" in e && (e as { code: string }).code === "P2002") {
+      return NextResponse.json({ ok: true, alreadyUpvoted: true });
+    }
+    throw e;
   }
-
-  await prisma.friendTraitContribution.create({
-    data: {
-      friendId,
-      contributorId: session.friendId,
-      tag,
-      displayTag: tidyDisplayTag(existing.displayTag),
-      kind: "upvote",
-    },
-  });
 
   return NextResponse.json({ ok: true });
 }

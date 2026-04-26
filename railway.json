@@ -1,0 +1,14 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "pnpm install && cp -r prototype/ public/prototype/ && pnpm exec prisma generate && pnpm build"
+  },
+  "deploy": {
+    "startCommand": "pnpm exec prisma db push --accept-data-loss && pnpm exec next start -p ${PORT:-3000}",
+    "healthcheckPath": "/",
+    "healthcheckTimeout": 100,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 10
+  }
+}

@@ -24,7 +24,14 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
 
   const friend = await prisma.friend.findUnique({
     where: { id },
-    select: { id: true, name: true, avatarUrl: true, status: true },
+    select: {
+      id: true,
+      name: true,
+      avatarUrl: true,
+      status: true,
+      heightInches: true,
+      weightLbs: true,
+    },
   });
   if (!friend) notFound();
 
@@ -71,6 +78,11 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
           </div>
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">{friend.name}</h1>
+            {friend.heightInches != null || friend.weightLbs != null ? (
+              <p className="text-sm text-neutral-300">
+                {formatHeightWeight(friend.heightInches, friend.weightLbs)}
+              </p>
+            ) : null}
             <div className="flex items-center gap-2 flex-wrap text-xs">
               <span
                 className={
@@ -154,6 +166,22 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
       </div>
     </main>
   );
+}
+
+function formatHeightWeight(
+  heightInches: number | null,
+  weightLbs: number | null,
+): string {
+  const parts: string[] = [];
+  if (heightInches != null) {
+    const feet = Math.floor(heightInches / 12);
+    const inches = heightInches % 12;
+    parts.push(`${feet}'${inches}"`);
+  }
+  if (weightLbs != null) {
+    parts.push(`${weightLbs} lbs`);
+  }
+  return parts.join(" • ");
 }
 
 function UnlockRow({

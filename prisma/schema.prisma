@@ -50,6 +50,8 @@ model Friend {
   name           String       @unique
   hashedPassword String
   avatarUrl      String?
+  heightInches   Int?
+  weightLbs      Int?
   status         FriendStatus @default(locked)
   unlockedAt     DateTime?
   cachedTraits   Json         @default("[]")

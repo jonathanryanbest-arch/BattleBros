@@ -2,17 +2,17 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
-import { StarterTraitsForm } from "@/components/StarterTraitsForm";
+import { OperatorPanel } from "@/components/OperatorPanel";
 
 export const dynamic = "force-dynamic";
 
-export default async function StarterTraitsPage() {
+export default async function OperatorPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
   const friends = await prisma.friend.findMany({
     orderBy: { name: "asc" },
-    select: { id: true, name: true },
+    select: { id: true, name: true, heightInches: true, weightLbs: true },
   });
 
   return (
@@ -23,16 +23,15 @@ export default async function StarterTraitsPage() {
         </Link>
 
         <header className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Starter traits</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Operator</h1>
           <p className="text-sm text-neutral-400">
-            Bulk-seed traits for a friend. One trait per line. Skips the sanity
-            gate and the daily rate limit — meant for curated bootstrap content.
+            Pick a friend, set their height and weight, and bulk-seed starter
+            traits. Skips the sanity gate and the daily rate limit — meant for
+            curated bootstrap content.
           </p>
         </header>
 
-        <section className="rounded-xl border border-neutral-800 bg-neutral-900 p-6">
-          <StarterTraitsForm friends={friends} />
-        </section>
+        <OperatorPanel friends={friends} />
       </div>
     </main>
   );

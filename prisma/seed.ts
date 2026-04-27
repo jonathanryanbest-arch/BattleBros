@@ -1,12 +1,13 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { DAY1_LOCATIONS } from "../lib/library/locations-day1";
 import { DAY1_WEAPONS } from "../lib/library/weapons-day1";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
 type RosterSeed = {
   name: string;

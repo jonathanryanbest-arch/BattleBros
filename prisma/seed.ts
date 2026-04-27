@@ -14,7 +14,7 @@ type RosterSeed = {
 }[];
 
 const DEFAULT_ROSTER: RosterSeed = [
-  { name: "Murph", password: "murph-pwd" },
+  { name: "Murph", password: "spaghetti" },
   { name: "Max", password: "max-pwd" },
   { name: "Mango", password: "mango-pwd" },
   { name: "Patty", password: "patty-pwd" },

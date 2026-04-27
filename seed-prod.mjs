@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
 
 const roster = [
-  { name: 'Murph', password: 'murph-pwd' },
+  { name: 'Murph', password: 'spaghetti' },
   { name: 'Max', password: 'max-pwd' },
   { name: 'Mango', password: 'mango-pwd' },
   { name: 'Patty', password: 'patty-pwd' },

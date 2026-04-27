@@ -51,6 +51,11 @@ export function FightStream({
     (async () => {
       try {
         const res = await fetch(`/api/fight/${fightId}/stream`);
+        if (!res.ok) {
+          const text = await res.text().catch(() => "");
+          setError(`Stream failed: ${res.status} ${text || res.statusText}`);
+          return;
+        }
         if (!res.body) {
           setError("No stream body");
           return;

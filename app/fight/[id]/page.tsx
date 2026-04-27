@@ -47,7 +47,7 @@ export default async function FightPage({ params }: { params: Params }) {
             {fight.status === "spinning"
               ? "Re-roll any reel until you're happy. Then lock in to fight."
               : fight.status === "locked"
-                ? "Locked. Press play to start the fight."
+                ? "Locked. Narrating the fight…"
                 : fight.status === "streaming"
                   ? "Live now."
                   : "Done."}

@@ -1,12 +1,13 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { DAY1_LOCATIONS } from "../lib/library/locations-day1";
 import { DAY1_WEAPONS } from "../lib/library/weapons-day1";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
 type RosterSeed = {
   name: string;
@@ -14,7 +15,7 @@ type RosterSeed = {
 }[];
 
 const DEFAULT_ROSTER: RosterSeed = [
-  { name: "Murph", password: "murph-pwd" },
+  { name: "Murph", password: "spaghetti" },
   { name: "Max", password: "max-pwd" },
   { name: "Mango", password: "mango-pwd" },
   { name: "Patty", password: "patty-pwd" },
@@ -43,14 +44,14 @@ async function seedRoster(roster: RosterSeed) {
     const hashedPassword = await bcrypt.hash(entry.password, 10);
     await prisma.friend.upsert({
       where: { name: entry.name },
-      update: {},
+      update: { hashedPassword },
       create: {
         name: entry.name,
         hashedPassword,
       },
     });
   }
-  console.log(`Seeded ${roster.length} friends.`);
+  console.log(`Seeded ${roster.length} friends (passwords rotated to match roster).`);
 }
 
 async function seedDay1Locations() {

@@ -44,6 +44,12 @@ export default async function RosterPage() {
           </div>
           <div className="flex items-center gap-3">
             <Link
+              href="/library"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500"
+            >
+              Library
+            </Link>
+            <Link
               href="/fights"
               className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 hover:border-neutral-500"
             >
@@ -67,30 +73,36 @@ export default async function RosterPage() {
               <Link
                 key={f.id}
                 href={`/roster/${f.id}`}
-                className={
-                  "group relative block rounded-xl border bg-neutral-900 p-5 transition-colors hover:border-neutral-500 " +
-                  (locked
-                    ? "border-neutral-800 text-neutral-500"
-                    : "border-neutral-700 text-neutral-100")
-                }
+                className="group relative block rounded-xl border border-neutral-700 bg-neutral-900 p-5 text-neutral-100 transition-colors hover:border-neutral-500"
               >
                 <div className="flex items-start gap-4">
-                  <div
-                    className={
-                      "h-16 w-16 shrink-0 rounded-full " +
-                      (locked ? "bg-neutral-800" : "bg-neutral-700") +
-                      " flex items-center justify-center text-xl font-semibold"
-                    }
-                  >
-                    {locked ? "?" : f.name[0]}
+                  <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full bg-neutral-700 flex items-center justify-center text-xl font-semibold">
+                    {f.avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={f.avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      f.name[0]
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <h2 className="text-lg font-semibold">{locked ? "Locked" : f.name}</h2>
-                    <p className="text-xs uppercase tracking-wide">
-                      {locked
-                        ? `Traits: ${f.counts.uniqueTagsInSnapshot} / ${UNLOCK_THRESHOLD} to unlock`
-                        : "Unlocked fighter"}
-                    </p>
+                  <div className="space-y-1.5 min-w-0">
+                    <h2 className="text-lg font-semibold truncate">{f.name}</h2>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span
+                        className={
+                          "text-[10px] uppercase tracking-wide rounded-full px-2 py-0.5 " +
+                          (locked
+                            ? "bg-neutral-800 text-neutral-400"
+                            : "bg-emerald-900/40 text-emerald-300")
+                        }
+                      >
+                        {locked ? "Locked" : "Unlocked"}
+                      </span>
+                      {locked ? (
+                        <span className="text-xs text-neutral-500">
+                          {f.counts.uniqueTagsInSnapshot} / {UNLOCK_THRESHOLD} traits
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
                 <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-neutral-800">
@@ -101,7 +113,7 @@ export default async function RosterPage() {
                 </div>
                 {f.counts.pendingSubmissions > 0 ? (
                   <p className="mt-2 text-[11px] text-neutral-500">
-                    {f.counts.pendingSubmissions} pending — applies at next nightly refresh
+                    {f.counts.pendingSubmissions} syncing
                   </p>
                 ) : null}
               </Link>

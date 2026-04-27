@@ -13,7 +13,6 @@ export type CloudTag = {
 export type ContributionRow = {
   tag: string;
   displayTag: string;
-  submitterName: string;
   submittedAt: string;
   upvotes: number;
   viewerHasUpvoted: boolean;
@@ -44,7 +43,6 @@ export async function loadContributionRows(
       tag: true,
       displayTag: true,
       createdAt: true,
-      contributor: { select: { name: true } },
     },
     orderBy: { createdAt: "asc" },
   });
@@ -57,7 +55,6 @@ export async function loadContributionRows(
   type Bucket = {
     tag: string;
     displayTag: string;
-    submitterName: string;
     submittedAt: Date;
     upvotes: number;
     viewerHasUpvoted: boolean;
@@ -66,7 +63,7 @@ export async function loadContributionRows(
   for (const s of submissions) {
     const existing = byTag.get(s.tag);
     if (existing) {
-      // First submitter "owns" the display tag and timestamp; subsequent
+      // Earlier submission keeps the display tag and timestamp; subsequent
       // submissions of the same tag count toward weight (the cron sums kind=submit).
       existing.upvotes += 1;
       continue;
@@ -74,7 +71,6 @@ export async function loadContributionRows(
     byTag.set(s.tag, {
       tag: s.tag,
       displayTag: s.displayTag,
-      submitterName: s.contributor.name,
       submittedAt: s.createdAt,
       upvotes: 0,
       viewerHasUpvoted: false,
@@ -92,7 +88,6 @@ export async function loadContributionRows(
     .map((b) => ({
       tag: b.tag,
       displayTag: b.displayTag,
-      submitterName: b.submitterName,
       submittedAt: b.submittedAt.toISOString(),
       upvotes: b.upvotes,
       viewerHasUpvoted: b.viewerHasUpvoted,

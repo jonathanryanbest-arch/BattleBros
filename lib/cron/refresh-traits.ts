@@ -44,25 +44,22 @@ export async function refreshAllProfiles(): Promise<RefreshSummary[]> {
 
   const summaries: RefreshSummary[] = [];
   for (const friend of friends) {
-    const since = friend.cachedTraitsAt;
-    const newCount = await prisma.friendTraitContribution.count({
-      where: {
-        friendId: friend.id,
-        ...(since ? { createdAt: { gt: since } } : {}),
-      },
-    });
-    if (newCount === 0) continue;
-
     const summary = await refreshOneFriend(friend.id, friend.name);
     summaries.push(summary);
   }
   return summaries;
 }
 
-async function refreshOneFriend(
-  friendId: string,
-  friendName: string,
-): Promise<RefreshSummary> {
+// Snapshot-only refresh: aggregate the cloud, write cachedTraits/cachedTraitsAt,
+// and flip status to unlocked if the friend just crossed UNLOCK_AT. Skips the
+// Groq-bound emergent-content derivation so it's safe to call inline from
+// trait-submission request handlers. The cron's full refreshOneFriend covers
+// emergent content idempotently.
+export async function refreshFriendSnapshot(friendId: string): Promise<{
+  uniqueTagsBefore: number;
+  uniqueTagsAfter: number;
+  unlocked: boolean;
+}> {
   const friend = await prisma.friend.findUniqueOrThrow({
     where: { id: friendId },
     select: { status: true, cachedTraits: true },
@@ -74,10 +71,6 @@ async function refreshOneFriend(
   const uniqueAfter = cloud.length;
 
   const willUnlock = friend.status === "locked" && uniqueAfter >= UNLOCK_AT;
-  const crossedSignatureWeapon =
-    previousUnique < SIGNATURE_WEAPON_AT && uniqueAfter >= SIGNATURE_WEAPON_AT;
-  const crossedHomeVenue =
-    previousUnique < HOME_VENUE_AT && uniqueAfter >= HOME_VENUE_AT;
 
   await prisma.friend.update({
     where: { id: friendId },
@@ -88,21 +81,49 @@ async function refreshOneFriend(
     },
   });
 
+  return {
+    uniqueTagsBefore: previousUnique,
+    uniqueTagsAfter: uniqueAfter,
+    unlocked: willUnlock,
+  };
+}
+
+async function refreshOneFriend(
+  friendId: string,
+  friendName: string,
+): Promise<RefreshSummary> {
+  const snapshot = await refreshFriendSnapshot(friendId);
+
+  const cloud = await aggregateCloud(friendId);
+
   let signatureWeaponProposed = false;
-  if (crossedSignatureWeapon) {
-    signatureWeaponProposed = await trySignatureWeapon(friendId, friendName, cloud);
+  if (snapshot.uniqueTagsAfter >= SIGNATURE_WEAPON_AT) {
+    const existing = await prisma.weapon.findFirst({
+      where: { source: "emergent", derivedFromFriendId: friendId },
+      select: { id: true },
+    });
+    if (!existing) {
+      signatureWeaponProposed = await trySignatureWeapon(friendId, friendName, cloud);
+    }
   }
+
   let homeVenueProposed = false;
-  if (crossedHomeVenue) {
-    homeVenueProposed = await tryHomeVenue(friendId, friendName, cloud);
+  if (snapshot.uniqueTagsAfter >= HOME_VENUE_AT) {
+    const existing = await prisma.location.findFirst({
+      where: { source: "emergent", derivedFromFriendId: friendId },
+      select: { id: true },
+    });
+    if (!existing) {
+      homeVenueProposed = await tryHomeVenue(friendId, friendName, cloud);
+    }
   }
 
   return {
     friendId,
     friendName,
-    uniqueTagsBefore: previousUnique,
-    uniqueTagsAfter: uniqueAfter,
-    unlocked: willUnlock,
+    uniqueTagsBefore: snapshot.uniqueTagsBefore,
+    uniqueTagsAfter: snapshot.uniqueTagsAfter,
+    unlocked: snapshot.unlocked,
     signatureWeaponProposed,
     homeVenueProposed,
   };

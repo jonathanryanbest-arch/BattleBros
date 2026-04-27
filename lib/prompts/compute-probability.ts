@@ -1,8 +1,4 @@
-// Pre-narration Claude call: read both fighters' trait clouds + venue +
-// weapons + drunkenness, emit a single integer probability that fighter A
-// wins (0-100).
-
-import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
+import { groq, LLM_MODEL } from "@/lib/anthropic";
 import type { CloudTag } from "@/lib/profile-data";
 import type { Location, Weapon, Drunkenness } from "@prisma/client";
 
@@ -47,26 +43,11 @@ function describeWeapon(w: Weapon | null, side: string): string {
 }
 
 export async function computeProbability(input: ProbabilityInput): Promise<number> {
-  const result = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
+  const result = await groq().chat.completions.create({
+    model: LLM_MODEL,
     max_tokens: 300,
-    system: SYSTEM,
-    tools: [
-      {
-        name: "emit",
-        description: "Emit the integer probability fighter A wins (0-100).",
-        input_schema: {
-          type: "object",
-          properties: {
-            probabilityA: { type: "integer", minimum: 0, maximum: 100 },
-            reasoning: { type: "string" },
-          },
-          required: ["probabilityA"],
-        },
-      },
-    ],
-    tool_choice: { type: "tool", name: "emit" },
     messages: [
+      { role: "system", content: SYSTEM },
       {
         role: "user",
         content: [
@@ -79,10 +60,33 @@ export async function computeProbability(input: ProbabilityInput): Promise<numbe
         ].join("\n"),
       },
     ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "emit",
+          description: "Emit the integer probability fighter A wins (0-100).",
+          parameters: {
+            type: "object",
+            properties: {
+              probabilityA: { type: "integer", minimum: 0, maximum: 100 },
+              reasoning: { type: "string" },
+            },
+            required: ["probabilityA"],
+          },
+        },
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "emit" } },
   });
-  const tool = result.content.find((c) => c.type === "tool_use");
-  if (!tool || tool.type !== "tool_use") return 50;
-  const out = tool.input as { probabilityA?: number };
-  const p = typeof out.probabilityA === "number" ? out.probabilityA : 50;
-  return Math.max(0, Math.min(100, Math.round(p)));
+
+  const call = result.choices[0]?.message?.tool_calls?.[0];
+  if (!call || call.type !== "function") return 50;
+  try {
+    const out = JSON.parse(call.function.arguments) as { probabilityA?: number };
+    const p = typeof out.probabilityA === "number" ? out.probabilityA : 50;
+    return Math.max(0, Math.min(100, Math.round(p)));
+  } catch {
+    return 50;
+  }
 }

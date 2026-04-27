@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireSession } from "@/lib/session";
 import { isValidTraitInput, normalizeTraitTag, tidyDisplayTag, TRAIT_MAX_LENGTH } from "@/lib/traits";
 import { runSanityGate } from "@/lib/prompts/sanity-gate";
+import { refreshFriendSnapshot } from "@/lib/cron/refresh-traits";
 
 const Body = z.object({
   tag: z.string().min(1).max(120),
@@ -93,10 +94,15 @@ export async function POST(request: Request, { params }: { params: Params }) {
     },
   });
 
+  try {
+    await refreshFriendSnapshot(friendId);
+  } catch (e) {
+    console.error("inline snapshot refresh failed", e);
+  }
+
   return NextResponse.json({
     ok: true,
     tag,
     displayTag,
-    appliesAt: "next-nightly-refresh",
   });
 }

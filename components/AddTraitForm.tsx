@@ -38,7 +38,7 @@ export function AddTraitForm({ friendId, friendName, suggestions }: Props) {
       }
       setTag("");
       setConfirmation(
-        `Submitted "${data.displayTag ?? tag}" for ${friendName}. Cloud refreshes nightly.`,
+        `Added "${data.displayTag ?? tag}" to ${friendName}'s cloud.`,
       );
       router.refresh();
     } finally {

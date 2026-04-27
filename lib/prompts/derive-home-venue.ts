@@ -1,8 +1,4 @@
-// Reads a fighter's trait cloud and proposes their iconic Location library
-// entry — their "home venue." Fired by the nightly cron the night the cloud
-// first crosses 15 unique tags.
-
-import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
+import { groq, LLM_MODEL } from "@/lib/anthropic";
 import type { CloudTag } from "@/lib/profile-data";
 
 export type ProposedLocation = {
@@ -42,47 +38,54 @@ export async function deriveHomeVenue(input: {
     .map((t) => `- ${t.displayTag} (weight ${t.weight})`)
     .join("\n");
 
-  const result = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
+  const result = await groq().chat.completions.create({
+    model: LLM_MODEL,
     max_tokens: 800,
-    system: SYSTEM,
-    tools: [
-      {
-        name: "propose",
-        description: "Emit the proposed home Location library entry for this fighter.",
-        input_schema: {
-          type: "object",
-          properties: {
-            confidence: { type: "boolean" },
-            key: { type: "string" },
-            name: { type: "string" },
-            blurb: { type: "string" },
-            modifiers: { type: "array", items: { type: "string" } },
-            environmentalAmmo: { type: "array", items: { type: "string" } },
-          },
-          required: ["confidence"],
-        },
-      },
-    ],
-    tool_choice: { type: "tool", name: "propose" },
     messages: [
+      { role: "system", content: SYSTEM },
       {
         role: "user",
         content: `Fighter: ${input.friendName}\n\nTrait cloud (heaviest first):\n${cloudText || "(empty)"}`,
       },
     ],
+    tools: [
+      {
+        type: "function",
+        function: {
+          name: "propose",
+          description: "Emit the proposed home Location library entry for this fighter.",
+          parameters: {
+            type: "object",
+            properties: {
+              confidence: { type: "boolean" },
+              key: { type: "string" },
+              name: { type: "string" },
+              blurb: { type: "string" },
+              modifiers: { type: "array", items: { type: "string" } },
+              environmentalAmmo: { type: "array", items: { type: "string" } },
+            },
+            required: ["confidence"],
+          },
+        },
+      },
+    ],
+    tool_choice: { type: "function", function: { name: "propose" } },
   });
 
-  const toolUse = result.content.find((c) => c.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") return null;
-  const out = toolUse.input as Partial<ProposedLocation> & { confidence?: boolean };
-  if (!out.confidence) return null;
-  if (!out.key || !out.name || !out.blurb || !out.modifiers || !out.environmentalAmmo) return null;
-  return {
-    key: out.key,
-    name: out.name,
-    blurb: out.blurb,
-    modifiers: out.modifiers,
-    environmentalAmmo: out.environmentalAmmo,
-  };
+  const call = result.choices[0]?.message?.tool_calls?.[0];
+  if (!call || call.type !== "function") return null;
+  try {
+    const out = JSON.parse(call.function.arguments) as Partial<ProposedLocation> & { confidence?: boolean };
+    if (!out.confidence) return null;
+    if (!out.key || !out.name || !out.blurb || !out.modifiers || !out.environmentalAmmo) return null;
+    return {
+      key: out.key,
+      name: out.name,
+      blurb: out.blurb,
+      modifiers: out.modifiers,
+      environmentalAmmo: out.environmentalAmmo,
+    };
+  } catch {
+    return null;
+  }
 }

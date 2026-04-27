@@ -6,7 +6,6 @@ import { useState, useTransition } from "react";
 export type ContributionRow = {
   tag: string;
   displayTag: string;
-  submitterName: string;
   submittedAt: string; // ISO
   upvotes: number;
   viewerHasUpvoted: boolean;
@@ -40,12 +39,12 @@ export function TraitContributionList({ friendId, contributions }: Props) {
               {c.displayTag}
               {c.pending ? (
                 <span className="ml-2 rounded-full bg-neutral-800 px-2 py-0.5 text-[10px] uppercase tracking-wide text-neutral-400">
-                  pending nightly refresh
+                  syncing
                 </span>
               ) : null}
             </p>
             <p className="text-[11px] text-neutral-500">
-              first by {c.submitterName} · weight {c.upvotes + 1}
+              weight {c.upvotes + 1}
             </p>
           </div>
           <button

@@ -40,6 +40,9 @@ roster.seed.json
 # vercel
 .vercel
 
+# claude code worktree config
+/.claude
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

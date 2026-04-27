@@ -50,6 +50,8 @@ model Friend {
   name           String       @unique
   hashedPassword String
   avatarUrl      String?
+  heightInches   Int?
+  weightLbs      Int?
   status         FriendStatus @default(locked)
   unlockedAt     DateTime?
   cachedTraits   Json         @default("[]")
@@ -78,6 +80,7 @@ model FriendTraitContribution {
   friend      Friend @relation("TraitsAbout", fields: [friendId], references: [id], onDelete: Cascade)
   contributor Friend @relation("TraitsBy", fields: [contributorId], references: [id], onDelete: Cascade)
 
+  @@unique([friendId, tag, kind, contributorId])
   @@index([friendId, tag])
   @@index([contributorId, friendId, kind, createdAt])
   @@index([friendId, kind])

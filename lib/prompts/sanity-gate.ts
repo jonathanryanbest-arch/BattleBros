@@ -1,10 +1,4 @@
-// Claude-powered sanity gate for trait submissions.
-// Goal: cheap pre-submission classifier. Reject obvious griefing (slurs,
-// fabricated crimes, sexual content, decontextualized harassment) and
-// non-traits (spam, gibberish, advertising). Accept anything that reads as a
-// plausible character trait, even if unflattering.
-
-import { anthropic, CLAUDE_MODEL } from "@/lib/anthropic";
+import { groq, LLM_MODEL } from "@/lib/anthropic";
 
 export type SanityVerdict = {
   decision: "accept" | "reject";
@@ -29,44 +23,46 @@ You REJECT a tag when it is:
 Reply by calling the \`decide\` tool exactly once.`;
 
 export async function runSanityGate(displayTag: string): Promise<SanityVerdict> {
-  const result = await anthropic.messages.create({
-    model: CLAUDE_MODEL,
+  const result = await groq().chat.completions.create({
+    model: LLM_MODEL,
     max_tokens: 200,
-    system: SYSTEM,
+    messages: [
+      { role: "system", content: SYSTEM },
+      { role: "user", content: `Trait tag submission:\n\n"${displayTag}"` },
+    ],
     tools: [
       {
-        name: "decide",
-        description: "Emit the moderation decision for the trait tag.",
-        input_schema: {
-          type: "object",
-          properties: {
-            decision: { type: "string", enum: ["accept", "reject"] },
-            reason: {
-              type: "string",
-              description:
-                "If rejected, a one-sentence explanation suitable to show the user. Optional on accept.",
+        type: "function",
+        function: {
+          name: "decide",
+          description: "Emit the moderation decision for the trait tag.",
+          parameters: {
+            type: "object",
+            properties: {
+              decision: { type: "string", enum: ["accept", "reject"] },
+              reason: {
+                type: "string",
+                description:
+                  "If rejected, a one-sentence explanation suitable to show the user. Optional on accept.",
+              },
             },
+            required: ["decision"],
           },
-          required: ["decision"],
         },
       },
     ],
-    tool_choice: { type: "tool", name: "decide" },
-    messages: [
-      {
-        role: "user",
-        content: `Trait tag submission:\n\n"${displayTag}"`,
-      },
-    ],
+    tool_choice: { type: "function", function: { name: "decide" } },
   });
 
-  const toolUse = result.content.find((c) => c.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
-    return { decision: "accept" };
-  }
-  const input = toolUse.input as { decision?: string; reason?: string };
-  if (input.decision === "reject") {
-    return { decision: "reject", reason: input.reason };
+  const call = result.choices[0]?.message?.tool_calls?.[0];
+  if (!call || call.type !== "function") return { decision: "accept" };
+  try {
+    const input = JSON.parse(call.function.arguments) as { decision?: string; reason?: string };
+    if (input.decision === "reject") {
+      return { decision: "reject", reason: input.reason };
+    }
+  } catch {
+    // Parse failure — default accept
   }
   return { decision: "accept" };
 }

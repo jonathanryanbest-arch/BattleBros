@@ -43,14 +43,14 @@ async function seedRoster(roster: RosterSeed) {
     const hashedPassword = await bcrypt.hash(entry.password, 10);
     await prisma.friend.upsert({
       where: { name: entry.name },
-      update: {},
+      update: { hashedPassword },
       create: {
         name: entry.name,
         hashedPassword,
       },
     });
   }
-  console.log(`Seeded ${roster.length} friends.`);
+  console.log(`Seeded ${roster.length} friends (passwords rotated to match roster).`);
 }
 
 async function seedDay1Locations() {

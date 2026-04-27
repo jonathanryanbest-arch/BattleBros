@@ -23,7 +23,7 @@ for (const e of roster) {
   await pool.query(
     `INSERT INTO "Friend" (id, name, "hashedPassword", status, "cachedTraits", "createdAt")
      VALUES ($1, $2, $3, 'locked', '[]', NOW())
-     ON CONFLICT (name) DO NOTHING`,
+     ON CONFLICT (name) DO UPDATE SET "hashedPassword" = EXCLUDED."hashedPassword"`,
     [id, e.name, hash]
   );
   console.log('OK', e.name);

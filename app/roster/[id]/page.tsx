@@ -96,7 +96,7 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
               </span>
               {counts.pendingSubmissions > 0 ? (
                 <span className="text-neutral-500">
-                  {counts.pendingSubmissions} pending — applies at next nightly refresh
+                  {counts.pendingSubmissions} syncing
                 </span>
               ) : null}
             </div>
@@ -140,7 +140,7 @@ export default async function FriendProfilePage({ params }: { params: Params }) 
             emptyMessage={
               locked
                 ? "No traits yet — be the first to add one."
-                : "Snapshot pending — refreshes nightly."
+                : "No traits in the snapshot yet."
             }
           />
           {cached.cachedTraitsAt ? (

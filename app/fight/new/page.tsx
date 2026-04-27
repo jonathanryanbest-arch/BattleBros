@@ -32,7 +32,7 @@ export default async function NewFightPage() {
           <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-6 text-sm text-neutral-300 space-y-2">
             <p>Need at least two unlocked fighters to start a fight.</p>
             <p className="text-neutral-500">
-              Unlock a fighter by adding 5 unique traits about them on their profile, then waiting for the next nightly refresh.
+              Unlock a fighter by adding 5 unique traits about them on their profile.
             </p>
           </div>
         ) : (

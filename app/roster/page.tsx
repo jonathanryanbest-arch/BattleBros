@@ -113,7 +113,7 @@ export default async function RosterPage() {
                 </div>
                 {f.counts.pendingSubmissions > 0 ? (
                   <p className="mt-2 text-[11px] text-neutral-500">
-                    {f.counts.pendingSubmissions} pending — applies at next nightly refresh
+                    {f.counts.pendingSubmissions} syncing
                   </p>
                 ) : null}
               </Link>

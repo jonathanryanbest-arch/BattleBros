@@ -7,6 +7,7 @@ import {
   normalizeTraitTag,
   tidyDisplayTag,
 } from "@/lib/traits";
+import { refreshFriendSnapshot } from "@/lib/cron/refresh-traits";
 
 const Body = z.object({
   tags: z.array(z.string()).min(1).max(200),
@@ -72,6 +73,14 @@ export async function POST(request: Request, { params }: { params: Params }) {
       } else {
         throw e;
       }
+    }
+  }
+
+  if (inserted > 0) {
+    try {
+      await refreshFriendSnapshot(friendId);
+    } catch (e) {
+      console.error("inline snapshot refresh failed", e);
     }
   }
 

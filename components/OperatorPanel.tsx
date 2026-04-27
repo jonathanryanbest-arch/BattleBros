@@ -315,7 +315,8 @@ function TraitsSection({
               </div>
             ) : null}
             <p className="text-[11px] text-neutral-500">
-              Trait cloud refreshes nightly.
+              Trait cloud updated immediately. Signature weapons and home
+              venues derive nightly.
             </p>
           </div>
         ) : null}
